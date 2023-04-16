@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TicketGoイベントサーチ</title>
+    <style>html,body{height:100%;}body{padding:0;margin:0;}h1{padding:0;margin:0;font-size:50%;}</style>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+
+    <!-- ヘッダー -->
+    <header class="text-white body-font bg-black">
+      <div class="container mx-auto flex flex-wrap p-5 flex-col md:flex-row items-center bg-black">
+        <a class="flex title-font font-medium items-center text-white mb-4 md:mb-0">
+          <a href="">
+            <img src="imgs/TicketGo_logo.JPG" width="40" height="40">
+          </a>
+          <span class="ml-3 text-xl">TicketGo</span>
+        </a>
+        <nav class="md:ml-auto flex flex-wrap items-center text-base justify-center">
+          <a class="mr-5 hover:text-blue-300 hover:font-bold" href="#">Home</a>
+          <a class="mr-5 hover:text-blue-300 hover:font-bold" href="#">履歴</a>
+          <a class="mr-5 hover:text-blue-300 hover:font-bold" href="#">お気に入り</a>
+          <a class="mr-5 hover:text-blue-300 hover:font-bold" href="#">My Account</a>
+        </nav>
+        <!-- ログアウトボタン -->
+        <button id="out" class="inline-flex items-center bg-gray-100 text-black border-0 py-1 px-3 focus:outline-none hover:bg-gray-400 rounded text-base mt-4 md:mt-0">Logout
+          <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="w-4 h-4 ml-1" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+  
+
+<!-- JQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- ログイン機能/Firebase実装 -->
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-app.js";
+  import { getDatabase, ref, push, set, onValue, onChildAdded, remove, onChildRemoved } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-database.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/9.19.1/firebase-auth.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.19.1/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: ,
+    authDomain: "ticketgo-541c6.firebaseapp.com",
+    projectId: "ticketgo-541c6",
+    storageBucket: "ticketgo-541c6.appspot.com",
+    messagingSenderId: "484836196113",
+    appId: "1:484836196113:web:272ea6fb1dd9d3481916b0",
+    measurementId: "G-32ECGXZL8S"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+ 
+
+    //################################################
+    //Firebase-Realtime-Database接続
+    //################################################
+    const db = getDatabase(app); //RealtimeDBに接続
+
+
+    //################################################
+    //GoogleAuth用
+    //################################################
+    const provider = new GoogleAuthProvider();
+    provider.addScope("https://www.googleapis.com/auth/contacts.readonly");
+    const auth = getAuth();
+
+
+    //################################################
+    //GoogleAuth用
+    //################################################
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/firebase.User
+        const uid = user.uid;
+        //ユーザー情報取得できます
+        if (user !== null) {
+          user.providerData.forEach((profile) => {
+            //Login情報取得
+            $("uname").text(profile.displayName);
+            // $("prof").attr("src",profile.photoURL);
+            // console.log("Sign-in provider: " + profile.providerId);
+            // console.log("Provider-specific UID: " + profile.uid);
+            // console.log("Email: " + profile.email);
+            // console.log("Photo URL: " + profile.photoURL);
+          })
+          // $("#status").fadeOut(500);
+        }
+
+         } else {
+        _redirect();  //User is signed out
+      }
+    });
+
+    //################################################
+    //ログアウト処理
+    //################################################
+    $("#out").on("click", function() {
+      // signInWithRedirect(auth, provider);
+      signOut(auth).then(() => {
+        //Sign-out successful.
+        _redirect();
+      }).catch((error) => {
+        //An error happened.
+        console.error(error);
+      });
+    });
+
+
+    //################################################
+    //ログイン画面へリダイレクト（関数作成）
+    //################################################
+    function _redirect(){
+      location.href="login.html";
+    }
+
+  </script>
+<!-- ログイン機能実装終わり youtube8:55あたり -->
+
+
+
+<!-- Google Map APIによるMap機能 -->
+    <script src="https://maps.googleapis.com/maps/api/js?key="></script>
+    <script>
+        function initMap() {
+            // 現在地を取得する
+            navigator.geolocation.getCurrentPosition(function(position) {
+                var currentLocation = {lat: position.coords.latitude, lng: position.coords.longitude};
+
+                // マップを表示する
+                var map = new google.maps.Map(document.getElementById('map'), {
+                    center: currentLocation,
+                    zoom: 14
+                    
+                });
+
+                // 現在地にマーカーを立てる
+                var marker = new google.maps.Marker({
+                    position: currentLocation,
+                    map: map
+                });
+
+                // 現在地の半径3km以内に円を表示する
+                var circle = new google.maps.Circle({
+                    strokeColor: '#0000FF',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: '#0000FF',
+                    fillOpacity: 0.2,
+                    map: map,
+                    center: currentLocation,
+                    radius: 3000
+                });
+
+                // デフォルトのマーカーにクリックイベントを追加する
+                marker.addListener('click', function() {
+                    alert('現在地です');
+                });
+
+                // カスタマイズしたマーカー1を作成する 国立競技場第一体育館
+                var image = {
+                    url: 'marker.png',
+                    size: new google.maps.Size(64, 64),
+                    origin: new google.maps.Point(0, 0),
+                    anchor: new google.maps.Point(32, 64)
+                };
+                var customMarker1 = new google.maps.Marker({
+                    position: {lat: 35.66784012512984, lng: 139.70014750052204}, 
+                    map: map,
+                    icon: {
+                        url: 'imgs/basketball_hoop.png',
+                        scaledSize: new google.maps.Size(70, 70)
+                    },
+                });
+                // カスタマイズしたマーカーに情報ウィンドウを追加する
+                var infoWindow1 = new google.maps.InfoWindow({
+                    content: '本日Bリーグの試合開催！<br>日本代表で人気もリーグ屈指の#24田中を擁するA東京が本年B1昇格チームをホーム代々木で迎え撃つ。<br>@国立競技場第一体育館'
+                });
+                customMarker1.addListener('mouseover', function() {
+                    infoWindow1.open(map, customMarker1);
+                });
+                customMarker1.addListener('mouseout', function() {
+                    infoWindow1.close();
+                });
+                customMarker1.addListener('click', function() {
+                    window.location.href = "../index.html";
+                });
+
+
+                // カスタマイズしたマーカー2を作成する 明治神宮野球場
+                var customMarker2 = new google.maps.Marker({
+                    position: {lat: 35.67471379773307, lng: 139.7171070826829}, 
+                    map: map,
+                    icon: {
+                        url: 'imgs/baseball.png',
+                        scaledSize: new google.maps.Size(70, 70)
+                    },
+                });
+                // カスタマイズしたマーカーに情報ウィンドウを追加する
+                var infoWindow2 = new google.maps.InfoWindow({
+                    content: '本日プロ野球の試合開催！<br>侍ジャパン村上を擁するヤクルトスワローズの打席爆発必至。<br>@明治神宮野球場'
+                });
+                customMarker2.addListener('mouseover', function() {
+                    infoWindow2.open(map, customMarker2);
+                });
+                customMarker2.addListener('mouseout', function() {
+                    infoWindow2.close();
+                });
+
+                // カスタマイズしたマーカー3を作成する 駒沢オリンピック公園総合運動場陸上競技場
+                var customMarker3 = new google.maps.Marker({
+                    position: {lat: 35.62575767532551,  lng: 139.6636881350837}, 
+                    map: map,
+                    icon: {
+                        url: 'imgs/rugby.png',
+                        scaledSize: new google.maps.Size(70, 70)
+                    },
+                });
+                // カスタマイズしたマーカーに情報ウィンドウを追加する
+                var infoWindow3 = new google.maps.InfoWindow({
+                    content: '本日ラグビーの試合開催！<br>世界の強豪国に名を連ねた日本ラグビーのトップリーグをお楽しみください。<br>@駒沢オリンピック公園総合運動場陸上競技場'
+                });
+                customMarker3.addListener('mouseover', function() {
+                    infoWindow3.open(map, customMarker3);
+                });
+                customMarker3.addListener('mouseout', function() {
+                    infoWindow3.close();
+                });
+
+                // カスタマイズしたマーカー4を作成する 国立競技場
+                var customMarker4 = new google.maps.Marker({
+                    position: {lat: 35.67835033603294, lng: 139.7147216841808}, 
+                    map: map,
+                    icon: {
+                        url: 'imgs/football.png',
+                        scaledSize: new google.maps.Size(70, 70)
+                    },
+                });
+                // カスタマイズしたマーカーに情報ウィンドウを追加する
+                var infoWindow4 = new google.maps.InfoWindow({
+                    content: '本日サッカー日本代表の親善試合開催！<br>日本対イラン。ジャパンブルーで観客席を埋めつくせ。<br>@国立競技場'
+                });
+                customMarker4.addListener('mouseover', function() {
+                    infoWindow4.open(map, customMarker4);
+                });
+                customMarker4.addListener('mouseout', function() {
+                    infoWindow4.close();
+                });
+
+                // カスタマイズしたマーカー5を作成する NHKホール
+                var customMarker5 = new google.maps.Marker({
+                    position: {lat: 35.6667183833392, lng: 139.6970324403547}, 
+                    map: map,
+                    icon: {
+                        url: 'imgs/violin.png',
+                        scaledSize: new google.maps.Size(70, 70)
+                    },
+                });
+                // カスタマイズしたマーカーに情報ウィンドウを追加する
+                var infoWindow5 = new google.maps.InfoWindow({
+                    content: '本日シネマオーケストラ開催！<br>あのBack To The Futureをオーケストラの生演奏で新たな感動体験を。<br>@NHKホール'
+                });
+                customMarker5.addListener('mouseover', function() {
+                    infoWindow5.open(map, customMarker5);
+                });
+                customMarker5.addListener('mouseout', function() {
+                    infoWindow5.close();
+                });
+                
+
+                // カスタマイズしたマーカー6を作成する オーチャードホール
+                var customMarker6 = new google.maps.Marker({
+                    position: {lat: 35.660852857830484, lng: 139.69503605652145},
+                    map: map,
+                    icon: {
+                        url: 'imgs/violin.png',
+                        scaledSize: new google.maps.Size(70, 70)
+                    },
+                });
+                // カスタマイズしたマーカーに情報ウィンドウを追加する
+                var infoWindow6 = new google.maps.InfoWindow({
+                    content: '本日渋谷の午後のコンサート第４回開催！<br>東京フィルハーモニー交響楽団によるクラシック音楽のコンサート。<br>@オーチャードホール'
+                });
+                customMarker6.addListener('mouseover', function() {
+                    infoWindow6.open(map, customMarker6);
+                });
+                customMarker6.addListener('mouseout', function() {
+                    infoWindow6.close();
+                });
+
+                // カスタマイズしたマーカー7を作成する ヨシモト∞ホール
+                var customMarker7 = new google.maps.Marker({
+                    position: {lat: 35.66208940344363, lng: 139.69766538394447}, 
+                    map: map,
+                    icon: {
+                        url: 'imgs/microphone.png',
+                        scaledSize: new google.maps.Size(70, 70)
+                    },
+                });
+                // カスタマイズしたマーカーに情報ウィンドウを追加する
+                var infoWindow7 = new google.maps.InfoWindow({
+                    content: '本日週末無限大ネタライブ開催！<br>紅しょうが、マルセイユを始め新進気鋭のお笑い芸人たちの無限ネタライブ。<br>@ヨシモト∞ホール'
+                });
+                customMarker7.addListener('mouseover', function() {
+                    infoWindow7.open(map, customMarker7);
+                });
+                customMarker7.addListener('mouseout', function() {
+                    infoWindow7.close();
+                });
+ 
+
+                // マーカーが円内に入ったときだけアニメーションで表示する
+                customMarker1.setAnimation(google.maps.Animation.DROP);
+                customMarker2.setAnimation(google.maps.Animation.DROP);
+                customMarker3.setAnimation(google.maps.Animation.DROP);
+                customMarker4.setAnimation(google.maps.Animation.DROP);
+                customMarker5.setAnimation(google.maps.Animation.DROP);
+                customMarker6.setAnimation(google.maps.Animation.DROP);
+                customMarker7.setAnimation(google.maps.Animation.DROP);
+          });
+        }
+    </script>
+</head>
+<body onload="initMap()">
+    <div id="map" style="height: 100%"></div>
+</body>
+</html>
+
+          <!-- フッター -->
+          <footer class="text-gray-600 body-font">
+            <div class="container px-5 py-10 mx-auto flex md:items-center lg:items-start md:flex-row md:flex-nowrap flex-wrap flex-col">
+              <div class="w-64 flex-shrink-0 md:mx-0 mx-auto text-center md:text-left">
+                <a class="flex title-font font-medium items-center md:justify-start justify-center text-gray-900">
+                    <a href="">
+                        <img src="imgs/TicketGo_logo.JPG" width="40" height="40">
+                      </a>
+                      <span class="text-xl">TicketGo</span>
+                </a>
+                <p class="mt-2 text-sm text-gray-500">すべてのライブを日常に</p>
+              </div>
+              <div class="flex-grow flex flex-wrap md:pl-20 -mb-10 md:mt-0 mt-10 md:text-left text-center">
+                <div class="lg:w-1/4 md:w-1/2 w-full px-4">
+                  <h2 class="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">Helpful Links</h2>
+                  <nav class="list-none mb-10">
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">My Account</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">How To Use</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">FAQ</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Get Help</a>
+                    </li>
+                  </nav>
+                </div>
+                <div class="lg:w-1/4 md:w-1/2 w-full px-4">
+                  <h2 class="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">About Us</h2>
+                  <nav class="list-none mb-10">
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Who We Are</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">TicketGo Blog</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Privacy Policy</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Work With Us</a>
+                    </li>
+                  </nav>
+                </div>
+                <!-- <div class="lg:w-1/4 md:w-1/2 w-full px-4"> -->
+                  <!-- <h2 class="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">CATEGORIES</h2>
+                  <nav class="list-none mb-10">
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">First Link</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Second Link</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Third Link</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Fourth Link</a>
+                    </li>
+                  </nav>
+                </div>
+                <div class="lg:w-1/4 md:w-1/2 w-full px-4">
+                  <h2 class="title-font font-medium text-gray-900 tracking-widest text-sm mb-3">CATEGORIES</h2>
+                  <nav class="list-none mb-10">
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">First Link</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Second Link</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Third Link</a>
+                    </li>
+                    <li>
+                      <a class="text-gray-600 hover:text-gray-800">Fourth Link</a>
+                    </li>
+                  </nav>
+                </div> -->
+              </div>
+            </div>
+            <div class="bg-gray-100">
+              <div class="container mx-auto py-4 px-5 flex flex-wrap flex-col sm:flex-row">
+                <p class="text-gray-500 text-sm text-center sm:text-left">© 2022 TicketGo —
+                  <a href="https://twitter.com/ta2taro" rel="noopener noreferrer" class="text-gray-600 ml-1" target="_blank">@ta2taro</a>
+                </p>
+                <span class="inline-flex sm:ml-auto sm:mt-0 mt-2 justify-center sm:justify-start">
+                  <a class="text-gray-500">
+                    <svg fill="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="w-5 h-5" viewBox="0 0 24 24">
+                      <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"></path>
+                    </svg>
+                  </a>
+                  <a class="ml-3 text-gray-500">
+                    <svg fill="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="w-5 h-5" viewBox="0 0 24 24">
+                      <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"></path>
+                    </svg>
+                  </a>
+                  <a class="ml-3 text-gray-500">
+                    <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="w-5 h-5" viewBox="0 0 24 24">
+                      <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
+                      <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zm1.5-4.87h.01"></path>
+                    </svg>
+                  </a>
+                  <a class="ml-3 text-gray-500">
+                    <svg fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="0" class="w-5 h-5" viewBox="0 0 24 24">
+                      <path stroke="none" d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"></path>
+                      <circle cx="4" cy="4" r="2" stroke="none"></circle>
+                    </svg>
+                  </a>
+                </span>
+              </div>
+            </div>
+          </footer>
+</body>
+</html>
